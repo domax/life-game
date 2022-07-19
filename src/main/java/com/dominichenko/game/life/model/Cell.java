@@ -5,27 +5,18 @@ import lombok.Data;
 /**
  * @author <a href="mailto:max@dominichenko.com">Max Dominichenko</a>
  */
-@SuppressWarnings("WeakerAccess")
 @Data
-public class Cell implements Comparable<Cell> {
+public class Cell {
 
-    private final int x;
-    private final int y;
+  private static final String E_COORD = " coordinate must be 0 or more";
 
-    public Cell(int x, int y) {
-        if (x < 0) throw new IllegalArgumentException("X coordinate must be 0 or more");
-        if (y < 0) throw new IllegalArgumentException("Y coordinate must be 0 or more");
-        this.x = x;
-        this.y = y;
-    }
+  private final int x;
+  private final int y;
 
-    @Override
-    public int compareTo(Cell o) {
-        if (o == null) return -1;
-        int result;
-        result = x - o.x;
-        if (result != 0) return result;
-        result = y - o.y;
-        return result;
-    }
+  public Cell(int x, int y) {
+    if (x < 0) throw new IllegalArgumentException("X" + E_COORD);
+    if (y < 0) throw new IllegalArgumentException("Y" + E_COORD);
+    this.x = x;
+    this.y = y;
+  }
 }

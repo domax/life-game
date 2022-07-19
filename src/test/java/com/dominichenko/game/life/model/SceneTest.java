@@ -1,103 +1,97 @@
 package com.dominichenko.game.life.model;
 
+import static com.dominichenko.game.life.test.IterableSizeMatcher.hasSize;
+import static org.hamcrest.CoreMatchers.allOf;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.hasItems;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertThrows;
+
+import lombok.val;
+import org.junit.Before;
 import org.junit.Test;
-
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.TreeSet;
-
-import static org.junit.Assert.*;
 
 /**
  * @author <a href="mailto:max@dominichenko.com">Max Dominichenko</a>
  */
 public class SceneTest {
 
-    private final Scene sceneHardcoded = new Scene(8, 6)
-            .addCell(6, 0)
-            .addCell(0, 1)
-            .addCell(1, 1)
-            .addCell(2, 1)
-            .addCell(6, 1)
-            .addCell(6, 2)
-            .addCell(3, 4)
-            .addCell(4, 4)
-            .addCell(3, 5)
-            .addCell(4, 5);
+  private Scene sceneHardcoded;
+  private String[] sceneLines, nextSceneLines;
 
-    private final String[] sceneLines = new String[] {
-            "......O.",
-            "OOO...O.",
-            "......O.",
-            "........",
-            "...OO...",
-            "...OO..."};
+  @Before
+  public void beforeEach() {
+    sceneHardcoded = new Scene(8, 6)
+        .addCell(6, 0)
+        .addCell(0, 1)
+        .addCell(1, 1)
+        .addCell(2, 1)
+        .addCell(6, 1)
+        .addCell(6, 2)
+        .addCell(3, 4)
+        .addCell(4, 4)
+        .addCell(3, 5)
+        .addCell(4, 5);
+    sceneLines = new String[] {
+        "......O.",
+        "OOO...O.",
+        "......O.",
+        "........",
+        "...OO...",
+        "...OO..."};
+    nextSceneLines = new String[] {
+        ".O......",
+        ".O...OOO",
+        ".O......",
+        "........",
+        "...OO...",
+        "...OO..."};
+  }
 
-    private final String[] nextSceneLines = new String[] {
-            ".O......",
-            ".O...OOO",
-            ".O......",
-            "........",
-            "...OO...",
-            "...OO..."};
+  @Test
+  public void testFromStrings() {
+    val actual = Scene.fromStrings('O', sceneLines);
+    assertThat(actual, is(sceneHardcoded));
+    assertThat(actual.getHeight(), is(6));
+    assertThat(actual.getWidth(), is(8));
+  }
 
-    @Test
-    public void testFromStrings() {
-        Scene actual = Scene.fromStrings('O', sceneLines);
-        assertEquals(sceneHardcoded, actual);
-        assertEquals(6, actual.getHeight());
-        assertEquals(8, actual.getWidth());
-    }
+  @Test
+  public void testFromStringsConstraints() {
+    assertThat(
+        assertThrows(IllegalArgumentException.class, () -> Scene.fromStrings('O', "...OOO..."))
+            .getMessage(),
+        containsString("Scene height"));
+    assertThat(
+        assertThrows(IllegalArgumentException.class, () -> Scene.fromStrings('O', ".", "O", "."))
+            .getMessage(),
+        containsString("Scene width"));
+  }
 
-    @Test
-    public void testFromStringsConstraints() {
-        try {
-            Scene.fromStrings('O', "...OOO...");
-            fail("Scene height constraint should be respected");
-        } catch (IllegalArgumentException e) {
-            assertTrue(e.getMessage().contains("Scene height"));
-        }
-        try {
-            Scene.fromStrings('O', ".", "O", ".");
-            fail("Scene width constraint should be respected");
-        } catch (IllegalArgumentException e) {
-            assertTrue(e.getMessage().contains("Scene width"));
-        }
-    }
+  @Test
+  public void testToStrings() {
+    assertThat(sceneHardcoded.toStrings('O', '.'), is(sceneLines));
+  }
 
-    @Test
-    public void testToStrings() {
-        assertArrayEquals(sceneLines, sceneHardcoded.toStrings('O', '.'));
-    }
+  @Test
+  public void testGetNeighborsOf() {
+    assertThat(
+        sceneHardcoded.getNeighborsOf(0, 0),
+        allOf(hasSize(2), hasItems(new Cell(0, 1), new Cell(1, 1))));
+    assertThat(
+        sceneHardcoded.getNeighborsOf(1, 1),
+        allOf(hasSize(2), hasItems(new Cell(0, 1), new Cell(2, 1))));
+    assertThat(
+        sceneHardcoded.getNeighborsOf(3, 4),
+        allOf(hasSize(3), hasItems(new Cell(3, 5), new Cell(4, 4), new Cell(4, 5))));
+    assertThat(
+        sceneHardcoded.getNeighborsOf(4, 5),
+        allOf(hasSize(3), hasItems(new Cell(3, 4), new Cell(3, 5), new Cell(4, 4))));
+  }
 
-    @Test
-    public void testGetNeighborsOf() {
-        assertEquals(
-                new TreeSet<>(Arrays.asList(
-                        new Cell(0, 1),
-                        new Cell(1, 1))),
-                new TreeSet<>(sceneHardcoded.getNeighborsOf(0, 0)));
-        assertEquals(
-                new TreeSet<>(Arrays.asList(
-                        new Cell(0, 1),
-                        new Cell(2, 1))),
-                new TreeSet<>(sceneHardcoded.getNeighborsOf(1, 1)));
-        assertEquals(
-                new HashSet<>(Arrays.asList(
-                        new Cell(3, 5),
-                        new Cell(4, 4),
-                        new Cell(4, 5))),
-                sceneHardcoded.getNeighborsOf(3, 4));
-        assertEquals(
-                new TreeSet<>(Arrays.asList(
-                        new Cell(3, 4),
-                        new Cell(3, 5),
-                        new Cell(4, 4))),
-                new TreeSet<>(sceneHardcoded.getNeighborsOf(4, 5)));
-    }
-
-    @Test
-    public void testNextScene() {
-        assertArrayEquals(nextSceneLines, sceneHardcoded.nextScene().toStrings('O', '.'));
-    }
+  @Test
+  public void testNextScene() {
+    assertThat(sceneHardcoded.nextScene().toStrings('O', '.'), is(nextSceneLines));
+  }
 }
