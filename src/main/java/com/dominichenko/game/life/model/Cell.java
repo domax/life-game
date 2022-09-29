@@ -14,8 +14,8 @@ public class Cell {
   private final int y;
 
   public Cell(int x, int y) {
-    if (x < 0) throw new IllegalArgumentException("X" + E_COORD);
-    if (y < 0) throw new IllegalArgumentException("Y" + E_COORD);
+    if (x < 0) throw new IndexOutOfBoundsException("X" + E_COORD);
+    if (y < 0) throw new IndexOutOfBoundsException("Y" + E_COORD);
     this.x = x;
     this.y = y;
   }

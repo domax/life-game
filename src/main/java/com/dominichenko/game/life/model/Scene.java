@@ -1,16 +1,20 @@
 package com.dominichenko.game.life.model;
 
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toSet;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
-
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.val;
-import lombok.var;
 
 /**
  * @author <a href="mailto:max@dominichenko.com">Max Dominichenko</a>
@@ -21,23 +25,26 @@ public class Scene {
   private final int width;
   private final int height;
 
-  @Getter(AccessLevel.NONE) private final Set<Cell> cells = new HashSet<>();
+  @Getter(AccessLevel.NONE)
+  private final Set<Cell> cells = new HashSet<>();
 
   public static Scene fromStrings(char cellChar, String... lines) {
     if (lines == null || lines.length < 2)
       throw new IllegalArgumentException("Scene height must be 2 or more");
 
-    val cells = new HashSet<Cell>();
-    var width = 0;
-    for (int y = 0; y < lines.length; ++y) {
-      val line = lines[y];
-      for (int x = 0; x < line.length(); ++x) {
-        if (line.charAt(x) == cellChar)
-          cells.add(new Cell(x, y));
-      }
-      if (width < line.length()) width = line.length();
-    }
-    val scene = new Scene(width, lines.length);
+    val yRef = new AtomicInteger(-1);
+    val wRef = new AtomicInteger();
+    val cells = Arrays.stream(lines)
+        .peek(line -> yRef.incrementAndGet())
+        .peek(line -> wRef.set(Math.max(line.length(), wRef.get())))
+        .flatMap(
+            line ->
+                IntStream.range(0, line.length())
+                    .filter(x -> line.charAt(x) == cellChar)
+                    .mapToObj(x -> new Cell(x, yRef.get())))
+        .collect(toSet());
+
+    val scene = new Scene(wRef.get(), lines.length);
     scene.cells.addAll(cells);
     return scene;
   }
@@ -50,30 +57,31 @@ public class Scene {
   }
 
   public Scene addCell(int x, int y) {
-    if (x < 0 || x >= width)
-      throw new IndexOutOfBoundsException("X position is out of bound");
-    if (y < 0 || y >= height)
-      throw new IndexOutOfBoundsException("Y position is out of bound");
-    cells.add(new Cell(x, y));
+    return addCell(new Cell(x, y));
+  }
+
+  public Scene addCell(Cell cell) {
+    if (cell.getX() >= width) throw new IndexOutOfBoundsException("X position is out of bound");
+    if (cell.getY() >= height) throw new IndexOutOfBoundsException("Y position is out of bound");
+    cells.add(cell);
     return this;
   }
 
-  public Cell getCell(int x, int y) {
-    return cells.stream()
-        .filter(cell -> cell.getX() == x && cell.getY() == y)
-        .findAny()
-        .orElse(null);
+  public Optional<Cell> getCell(int x, int y) {
+    return cells.stream().filter(cell -> cell.getX() == x && cell.getY() == y).findAny();
   }
 
   public Scene nextScene() {
     val scene = new Scene(width, height);
-    for (int x = 0; x < width; ++x) {
-      for (int y = 0; y < height; ++y) {
-        val neighborsSize = getNeighborsOf(x, y).size();
-        if (neighborsSize == 3 || neighborsSize == 2 && getCell(x, y) != null)
-          scene.addCell(x, y);
-      }
-    }
+    IntStream.range(0, width)
+        .mapToObj(x -> IntStream.range(0, width).mapToObj(y -> new Cell(x, y)))
+        .flatMap(identity())
+        .filter(
+            c ->
+                Optional.of(getNeighborsOf(c.getX(), c.getY()).size())
+                    .filter(sz -> sz == 3 || sz == 2 && getCell(c.getX(), c.getY()).isPresent())
+                    .isPresent())
+        .forEach(scene::addCell);
     return scene;
   }
 
@@ -87,19 +95,19 @@ public class Scene {
             getCell(x + 1, y + 1),
             getCell(x, y - 1),
             getCell(x, y + 1))
-        .filter(Objects::nonNull)
-        .collect(Collectors.toSet());
+        .filter(Optional::isPresent)
+        .map(Optional::get)
+        .collect(toSet());
   }
 
   public String[] toStrings(char cellChar, char emptyChar) {
-    String[] lines = new String[getHeight()];
-    int w = getWidth();
-    for (int y = 0; y < lines.length; ++y) {
-      StringBuilder line = new StringBuilder();
-      for (int x = 0; x < w; ++x)
-        line.append(getCell(x, y) == null ? emptyChar : cellChar);
-      lines[y] = line.toString();
-    }
-    return lines;
+    return IntStream.range(0, height)
+        .mapToObj(
+            y ->
+                IntStream.range(0, width)
+                    .mapToObj(x -> getCell(x, y).isPresent() ? cellChar : emptyChar)
+                    .map(Object::toString)
+                    .collect(joining()))
+        .toArray(String[]::new);
   }
 }

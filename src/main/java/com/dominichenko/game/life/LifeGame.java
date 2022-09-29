@@ -1,13 +1,15 @@
 package com.dominichenko.game.life;
 
+import static java.util.function.Predicate.not;
+import static java.util.stream.Collectors.toList;
+
 import com.dominichenko.game.life.model.Scene;
 import java.io.File;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Objects;
 import java.util.Scanner;
 import java.util.stream.Stream;
-import lombok.var;
+import lombok.val;
 
 /**
  * @author <a href="mailto:max@dominichenko.com">Max Dominichenko</a>
@@ -19,24 +21,19 @@ public class LifeGame {
 
   @SuppressWarnings({"java:S2189", "InfiniteLoopStatement", "BusyWait"})
   public static void main(String[] args) throws Exception {
-    final List<String> lines;
-    if (args.length > 0) {
-      lines = Files.readAllLines(new File(args[0]).toPath());
-    } else {
-      lines = new ArrayList<>();
-      String line;
-      while ((line = SCAN.nextLine()) != null) {
-        if (line.isEmpty()) break;
-        lines.add(line);
-      }
-    }
-
+    val lines = args.length > 0
+        ? Files.readAllLines(new File(args[0]).toPath())
+        : Stream.generate(SCAN::nextLine)
+            .takeWhile(Objects::nonNull)
+            .takeWhile(not(String::isEmpty))
+            .collect(toList());
     var scene = Scene.fromStrings('O', lines.toArray(new String[0]));
+
     while (true) {
       clearConsole();
       Stream.of(scene.toStrings('O', '.')).forEach(System.out::println);
       scene = scene.nextScene();
-      Thread.sleep(500);
+      Thread.sleep(300);
     }
   }
 
